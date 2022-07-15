@@ -10,6 +10,7 @@ OPT_ARGS=""
 # LDAP Vars
 LDAP_PASSWORD ?= "demopassword"
 LDAP_DOMAIN_URL ?= "platformfeverdream.io"
+LAM_PASSWORD ?= "demopassword"
 
 # LDAP generated
 LDAP_DC := $(shell v='${LDAP_DOMAIN_URL}'; echo "$${v%.*}" )
@@ -22,7 +23,7 @@ check-tools: ## Check to make sure you have the right tools
 
 start-ldap-manager: check-tools
 	@printf "\n===> Starting LAM\n";
-	@${SCRIPTS_DIR}/start-ldap-manager
+	@docker run -p 8080:80  -d --name lam -e LDAP_SERVER=ldap://ldap.${LDAP_DOMAIN_URL} -e LDAP_DOMAIN=${LDAP_DOMAIN_URL} -e LAM_PASSWORD=$(LAM_PASSWORD) ldapaccountmanager/lam:stable
 	@printf "\nOpen a browser to http://localhost:8080\n";
 
 stop-ldap-manager: check-tools
@@ -34,7 +35,7 @@ create-openldap-cloud-config: check-tools
 	@printf "\n===> Generating cloud config for OpenLDAP\n";
 	cat ${CLOUD_INIT_DIR}/userdata.yaml | LDAP_ADMIN_PASSWORD=$(LDAP_PASSWORD) LDAP_DOMAIN_URL=${LDAP_DOMAIN_URL} LDAP_DC=${LDAP_DC} LDAP_BASE_DC=${LDAP_BASE_DC} envsubst > /tmp/userdata.yaml
 	@printf "\nCloud Init Ready, file located at /tmp/userdata.yaml\n";
-	@printf "\nYou can regenerate with a non-default password by overriding PASSWORD when calling this target\n";
+	@printf "\nYou can regenerate with a non-default password and domain by overriding LDAP_PASSWORD and LDAP_DOMAIN_URL when calling this target\n";
 
 
 
