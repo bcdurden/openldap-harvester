@@ -1,0 +1,50 @@
+#cloud-config
+package_update: true
+write_files:
+  - path: /etc/ldap/ldap.conf
+    owner: root
+    content: |
+      #
+      # LDAP Defaults
+      #
+
+      # See ldap.conf(5) for details
+      # This file should be world readable but not world writable.
+
+      BASE	dc=${LDAP_DC},dc=${LDAP_BASE_DC}
+      URI	ldap://ldap.${LDAP_DOMAIN_URL} ldap://localhost
+
+      #SIZELIMIT	12
+      #TIMELIMIT	15
+      #DEREF		never
+
+      # TLS certificates (needed for GnuTLS)
+      TLS_CACERT	/etc/ssl/certs/ca-certificates.crt
+
+
+packages:
+  - qemu-guest-agent
+  - debconf-utils
+  - slapd 
+  - ldap-utils
+runcmd:
+  - - systemctl
+    - enable
+    - '--now'
+    - qemu-guest-agent.service
+  - echo slapd slapd/password2	password ${LDAP_ADMIN_PASSWORD} | debconf-set-selections -v
+  - echo slapd slapd/internal/generated_adminpw	password ${LDAP_ADMIN_PASSWORD}	| debconf-set-selections -v
+  - echo slapd slapd/internal/adminpw	password ${LDAP_ADMIN_PASSWORD} | debconf-set-selections -v
+  - echo slapd slapd/password1	password ${LDAP_ADMIN_PASSWORD}	| debconf-set-selections -v
+  - echo slapd shared/organization	string	homelab | debconf-set-selections -v
+  - echo slapd slapd/move_old_database	boolean	true | debconf-set-selections -v
+  - echo slapd slapd/upgrade_slapcat_failure	error	| debconf-set-selections -v
+  - echo slapd slapd/purge_database	boolean	false | debconf-set-selections -v
+  - echo slapd slapd/dump_database	select	when needed | debconf-set-selections -v
+  - echo slapd slapd/invalid_config	boolean	true | debconf-set-selections -v
+  - echo slapd slapd/password_mismatch	note | debconf-set-selections -v
+  - echo slapd slapd/dump_database_destdir	string	/var/backups/slapd-VERSION | debconf-set-selections -v
+  - echo slapd slapd/domain	string	${LDAP_DOMAIN_URL} | debconf-set-selections -v
+  - echo slapd slapd/postinst_error	note	| debconf-set-selections -v
+  - echo slapd slapd/no_configuration	boolean	false | debconf-set-selections -v
+  - dpkg-reconfigure -fnoninteractive slapd
